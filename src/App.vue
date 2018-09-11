@@ -1,18 +1,52 @@
 <template>
   <div id="app">
     <div class="app-phone">
+      <!-- Header -->
       <div class="phone-header">
         <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1211695/vue_gram_logo_cp.png" />
+        <a class="cancel-cta"
+          v-if="step === 2 || step === 3"
+          @click="goToHome">
+          Cancel
+        </a>
+        <a class="next-cta"
+          v-if="step === 2"
+          @click="step++">
+          Next
+        </a>
+        <a class="next-cta"
+          v-if="step === 3"
+          @click="sharePost">
+          Share
+        </a>
       </div>
+      <!-- Body -->
       <phone-body
+        :step="step"
         :posts="posts"
-        :filters="filters"/>
+        :filters="filters"
+        :image="image"
+        :selectedFilter="selectedFilter"
+        v-model="caption"
+      />
+      <!-- Footer -->
       <div class="phone-footer">
        <div class="home-cta">
-        <i class="fas fa-home fa-lg"></i>
+        <i
+          class="fas fa-home fa-lg"
+          @click="goToHome">
+        </i>
        </div>
        <div class="upload-cta">
-        <i class="far fa-plus-square fa-lg"></i>
+         <input type="file"
+            name="file"
+            id="file"
+            class="inputfile"
+            :disabled="step !== 1"
+            @change="uploadImage"/>
+          <label for="file">
+            <i class="far fa-plus-square fa-lg"></i>
+          </label>
        </div>
       </div>
     </div>
@@ -21,9 +55,9 @@
 
 <script>
 import PhoneBody from '@/components/PhoneBody'
-
 import posts from '@/data/posts'
 import filters from '@/data/filters'
+import EventBus from '@/event-bus.js'
 
 export default {
   name: 'App',
@@ -32,8 +66,51 @@ export default {
   },
   data () {
     return {
+      step: 1,
       posts,
-      filters
+      filters,
+      image: '',
+      selectedFilter: '',
+      caption: ''
+    }
+  },
+  created () {
+    EventBus.$on('filter-selected', evt => {
+      this.selectedFilter = evt.filter
+    })
+  },
+  methods: {
+    uploadImage (evt) {
+      const files = evt.target.files
+      if (!files.length) return
+
+      const reader = new FileReader()
+      reader.readAsDataURL(files[0])
+      reader.onload = evt => {
+        this.image = evt.target.result
+        this.step = 2
+      }
+
+      // To enable reuploading of same files in Chrome
+      document.querySelector('#file').value = ''
+    },
+    goToHome () {
+      this.image = ''
+      this.selectedFilter = ''
+      this.caption = ''
+      this.step = 1
+    },
+    sharePost () {
+      const post = {
+        username: 'fullstack_vue',
+        userImage: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/1211695/vue_lg_bg.png',
+        postImage: this.image,
+        likes: 0,
+        caption: this.caption,
+        filter: this.filterType
+      }
+      this.posts.unshift(post)
+      this.goToHome()
     }
   }
 }
